@@ -5,6 +5,8 @@ import User from "../models/User.js";
 import {
   generateAccessToken,
   generateRefreshToken,
+  generateResetToken,
+  verifyResetToken,
 } from "../services/token.service.js";
 import { generateOtp, sendOtpEmail } from "../services/otp.service.js";
 import ApiResponse from "../utils/ApiResponse.js";
@@ -210,7 +212,7 @@ export const signup = async (req, res) => {
  */
 export const verifyOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email, otp, purpose } = req.body;
 
     if (!email || !otp) {
       return res.status(400).json(
@@ -271,9 +273,23 @@ export const verifyOtp = async (req, res) => {
       );
     }
 
+    // Clear the consumed OTP
+    user.otp = { code: null, expiresAt: null };
+
+    // If purpose is forgot_password, issue resetToken without logging in
+    if (purpose === "forgot_password") {
+      await user.save();
+      const resetToken = generateResetToken(user._id, user.email);
+      return res.status(200).json(
+        new ApiResponse(true, "Code verified", {
+          resetToken,
+          email: user.email,
+        }),
+      );
+    }
+
     // Activate user
     user.isVerified = true;
-    user.otp = { code: null, expiresAt: null };
 
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
@@ -307,7 +323,7 @@ export const verifyOtp = async (req, res) => {
  */
 export const resendOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, purpose } = req.body;
 
     if (!email || !email.trim()) {
       return res.status(400).json(
@@ -330,7 +346,7 @@ export const resendOtp = async (req, res) => {
       );
     }
 
-    if (user.isVerified) {
+    if (user.isVerified && purpose !== "forgot_password") {
       return res.status(400).json(
         new ApiResponse(false, "Email is already verified", null, null, ErrorCodes.VALIDATION_FAILED),
       );
@@ -340,7 +356,11 @@ export const resendOtp = async (req, res) => {
     user.otp = { code: newOtp, expiresAt: newExpiresAt };
     await user.save();
 
-    await sendOtpEmail(normalizedEmail, newOtp, "resend_verification");
+    await sendOtpEmail(
+      normalizedEmail,
+      newOtp,
+      purpose === "forgot_password" ? "forgot_password" : "resend_verification",
+    );
 
     return res.status(200).json(
       new ApiResponse(true, "A new verification code has been sent to your email", {
@@ -557,3 +577,152 @@ export const registerDeviceToken = async (req, res) => {
       .json(new ApiResponse(false, "Failed to register device token", null, null, ErrorCodes.SERVER_ERROR));
   }
 };
+
+/**
+ * Request password reset OTP via email or username.
+ */
+export const forgotPassword = async (req, res) => {
+  try {
+    const { identifier } = req.body;
+
+    if (!identifier || !identifier.trim()) {
+      return res.status(400).json(
+        new ApiResponse(
+          false,
+          "Username or email is required",
+          null,
+          { identifier: ["Username or email is required"] },
+          ErrorCodes.VALIDATION_FAILED,
+        ),
+      );
+    }
+
+    const cleanIdentifier = identifier.trim().toLowerCase();
+    const isEmail = /^\S+@\S+\.\S+$/.test(cleanIdentifier);
+
+    const user = await User.findOne(
+      isEmail ? { email: cleanIdentifier } : { username: cleanIdentifier },
+    );
+
+    if (!user) {
+      return res.status(404).json(
+        new ApiResponse(
+          false,
+          "No account found with this username or email",
+          null,
+          { identifier: ["No account found with this username or email"] },
+          ErrorCodes.USER_NOT_FOUND,
+        ),
+      );
+    }
+
+    const { code: otpCode, expiresAt: otpExpiresAt } = generateOtp();
+    user.otp = { code: otpCode, expiresAt: otpExpiresAt };
+    await user.save();
+
+    await sendOtpEmail(user.email, otpCode, "forgot_password");
+
+    return res.status(200).json(
+      new ApiResponse(true, "Verification code sent to your email", {
+        email: user.email,
+      }),
+    );
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(false, "Internal server error", null, null, ErrorCodes.SERVER_ERROR));
+  }
+};
+
+/**
+ * Reset password using verified resetToken.
+ */
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, resetToken, newPassword } = req.body;
+
+    const errors = {};
+    if (!email || !email.trim()) {
+      errors.email = ["Email is required"];
+    }
+    if (!resetToken || !resetToken.trim()) {
+      errors.resetToken = ["Reset token is required"];
+    }
+    if (!newPassword) {
+      errors.newPassword = ["Password is required"];
+    } else if (newPassword.length < 6) {
+      errors.newPassword = ["Password must be at least 6 characters"];
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return res
+        .status(400)
+        .json(new ApiResponse(false, "Validation failed", null, errors, ErrorCodes.VALIDATION_FAILED));
+    }
+
+    let decoded;
+    try {
+      decoded = verifyResetToken(resetToken);
+    } catch {
+      return res.status(401).json(
+        new ApiResponse(
+          false,
+          "Reset link or token has expired or is invalid. Please request a new code.",
+          null,
+          null,
+          ErrorCodes.INVALID_RESET_TOKEN,
+        ),
+      );
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!decoded || decoded.purpose !== "reset_password" || decoded.email.toLowerCase() !== normalizedEmail) {
+      return res.status(401).json(
+        new ApiResponse(
+          false,
+          "Invalid reset token.",
+          null,
+          null,
+          ErrorCodes.INVALID_RESET_TOKEN,
+        ),
+      );
+    }
+
+    const user = await User.findById(decoded.userId).select("+refreshToken");
+    if (!user) {
+      return res.status(404).json(
+        new ApiResponse(false, "User not found", null, null, ErrorCodes.USER_NOT_FOUND),
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    user.password = hashedPassword;
+    user.isVerified = true;
+
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    return res.status(200).json(
+      new ApiResponse(true, "Password reset successfully", {
+        user: {
+          id: user._id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          isVerified: user.isVerified,
+        },
+        accessToken,
+        refreshToken,
+      }),
+    );
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(false, "Internal server error", null, null, ErrorCodes.SERVER_ERROR));
+  }
+};
+

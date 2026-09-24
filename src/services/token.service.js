@@ -23,3 +23,25 @@ export const generateRefreshToken = (userId) => {
     },
   );
 };
+
+export const generateResetToken = (userId, email) => {
+  return jwt.sign(
+    {
+      userId,
+      email,
+      purpose: "reset_password",
+    },
+    process.env.RESET_TOKEN_SECRET || process.env.ACCESS_TOKEN_SECRET,
+    {
+      expiresIn: "15m",
+    },
+  );
+};
+
+export const verifyResetToken = (token) => {
+  return jwt.verify(
+    token,
+    process.env.RESET_TOKEN_SECRET || process.env.ACCESS_TOKEN_SECRET,
+  );
+};
+

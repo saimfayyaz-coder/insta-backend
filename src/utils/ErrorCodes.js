@@ -25,6 +25,8 @@ export const ErrorCodes = {
   REFRESH_TOKEN_REQUIRED:  'REFRESH_TOKEN_REQUIRED',  // No refresh token in body
   REFRESH_TOKEN_INVALID:   'REFRESH_TOKEN_INVALID',   // Refresh token mismatch
   REFRESH_TOKEN_EXPIRED:   'REFRESH_TOKEN_EXPIRED',   // Refresh token expired
+  INVALID_RESET_TOKEN:     'INVALID_RESET_TOKEN',     // Password reset token expired or invalid
+
 
   // ─── Generic ──────────────────────────────────────────────────────────────
   SERVER_ERROR:            'SERVER_ERROR',            // Unhandled 500

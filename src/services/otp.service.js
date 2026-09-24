@@ -36,15 +36,26 @@ export const sendOtpEmail = async (email, code, purpose = "verification") => {
         },
       });
 
+      const isForgotPassword = purpose === "forgot_password";
+      const subject = isForgotPassword
+        ? `${code} is your Instagram password reset code`
+        : `${code} is your Instagram verification code`;
+      const title = isForgotPassword
+        ? "Reset your password"
+        : "Confirm your email address";
+      const message = isForgotPassword
+        ? "Use the following 6-digit confirmation code to reset your Instagram password:"
+        : "Use the following 6-digit confirmation code to complete your Instagram registration:";
+
       await transporter.sendMail({
         from: process.env.SMTP_FROM || '"Instagram Clone" <no-reply@instagramclone.com>',
         to: email,
-        subject: `${code} is your Instagram verification code`,
+        subject,
         text: `Your Instagram confirmation code is ${code}. It expires in 10 minutes.`,
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 1px solid #dbdbdb; border-radius: 8px;">
-            <h2 style="color: #262626; margin-bottom: 16px;">Confirm your email address</h2>
-            <p style="color: #737373; font-size: 14px; line-height: 1.5;">Use the following 6-digit confirmation code to complete your Instagram registration:</p>
+            <h2 style="color: #262626; margin-bottom: 16px;">${title}</h2>
+            <p style="color: #737373; font-size: 14px; line-height: 1.5;">${message}</p>
             <div style="background-color: #fafafa; border: 1px dashed #0095f6; border-radius: 6px; padding: 16px; text-align: center; margin: 24px 0;">
               <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #0095f6;">${code}</span>
             </div>

@@ -10,6 +10,8 @@ import {
   logout,
   getCurrentUser,
   registerDeviceToken,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/auth.controller.js";
 
 import { protect } from "../middlewares/auth.middleware.js";
@@ -23,6 +25,10 @@ router.post("/signup", signup);
 router.post("/verify-otp", verifyOtp);
 
 router.post("/resend-otp", resendOtp);
+
+router.post("/forgot-password", forgotPassword);
+
+router.post("/reset-password", resetPassword);
 
 router.post("/login", login);
 
