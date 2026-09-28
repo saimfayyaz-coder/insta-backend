@@ -498,10 +498,10 @@ export const login = async (req, res) => {
         .json(
           new ApiResponse(
             false,
-            "Invalid credentials",
+            "No account found with this username or email",
             null,
-            { identifier: ["No account found with this username or email"] },
-            ErrorCodes.INVALID_CREDENTIALS,
+            { identifier: ["USER_NOT_FOUND"] },
+            ErrorCodes.USER_NOT_FOUND,
           ),
         );
     }
@@ -514,10 +514,10 @@ export const login = async (req, res) => {
         .json(
           new ApiResponse(
             false,
-            "Invalid credentials",
+            "Incorrect password",
             null,
-            { password: ["Incorrect password"] },
-            ErrorCodes.INVALID_CREDENTIALS,
+            { password: ["INCORRECT_PASSWORD"] },
+            ErrorCodes.INCORRECT_PASSWORD,
           ),
         );
     }

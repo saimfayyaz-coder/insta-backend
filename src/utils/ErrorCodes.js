@@ -5,9 +5,9 @@
  * Contract: errors.${ErrorCodes.X} must exist in every locale file on the client.
  */
 export const ErrorCodes = {
-  // ─── Auth ─────────────────────────────────────────────────────────────────
-  INVALID_CREDENTIALS:    'INVALID_CREDENTIALS',    // Wrong email or password
-  EMAIL_ALREADY_EXISTS:   'EMAIL_ALREADY_EXISTS',   // Signup with taken email
+  INVALID_CREDENTIALS:    'INVALID_CREDENTIALS',
+  INCORRECT_PASSWORD:     'INCORRECT_PASSWORD',
+  EMAIL_ALREADY_EXISTS:   'EMAIL_ALREADY_EXISTS',
   USERNAME_ALREADY_EXISTS:'USERNAME_ALREADY_EXISTS',// Signup with taken username
   USERNAME_REQUIRED:      'USERNAME_REQUIRED',      // Username missing
   INVALID_USERNAME:       'INVALID_USERNAME',       // Username format invalid
