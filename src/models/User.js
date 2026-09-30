@@ -9,6 +9,36 @@ const userSchema = new mongoose.Schema(
       maxlength: 50,
     },
 
+    avatar: {
+      url: {
+        type: String,
+        default: null,
+      },
+      publicId: {
+        type: String,
+        default: null,
+      },
+    },
+
+    bio: {
+      type: String,
+      trim: true,
+      default: '',
+      maxlength: [150, 'Bio cannot exceed 150 characters'],
+    },
+
+    website: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'custom', 'prefer_not_to_say'],
+      default: 'prefer_not_to_say',
+    },
+
     username: {
       type: String,
       required: true,
