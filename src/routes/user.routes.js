@@ -12,8 +12,7 @@ import {
 const router = express.Router();
 
 router.get("/profile", protect, getProfile);
-router.get("/:username", protect, getPublicProfile);
-router.patch("/profile", protect, updateProfile);
+router.route("/profile").patch(protect, updateProfile).put(protect, updateProfile);
 router.post(
   "/profile/avatar",
   protect,
@@ -21,5 +20,15 @@ router.post(
   updateAvatar,
 );
 router.delete("/profile/avatar", protect, removeAvatar);
+
+router.post(
+  "/avatar",
+  protect,
+  uploadAvatarMiddleware.single("avatar"),
+  updateAvatar,
+);
+router.delete("/avatar", protect, removeAvatar);
+
+router.get("/:username", protect, getPublicProfile);
 
 export default router;
