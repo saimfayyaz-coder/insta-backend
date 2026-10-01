@@ -21,14 +21,6 @@ router.post(
 );
 router.delete("/profile/avatar", protect, removeAvatar);
 
-router.post(
-  "/avatar",
-  protect,
-  uploadAvatarMiddleware.single("avatar"),
-  updateAvatar,
-);
-router.delete("/avatar", protect, removeAvatar);
-
 router.get("/:username", protect, getPublicProfile);
 
 export default router;
