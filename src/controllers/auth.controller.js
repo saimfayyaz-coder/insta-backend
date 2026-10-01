@@ -11,6 +11,7 @@ import {
 import { generateOtp, sendOtpEmail } from "../services/otp.service.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { ErrorCodes } from "../utils/ErrorCodes.js";
+import { formatUserResponse } from "../utils/userFormatter.js";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9._]+$/;
 
@@ -343,13 +344,7 @@ export const verifyOtp = async (req, res) => {
 
     return res.status(200).json(
       new ApiResponse(true, "Email verified successfully", {
-        user: {
-          id: user._id,
-          name: user.name,
-          username: user.username,
-          email: user.email,
-          isVerified: user.isVerified,
-        },
+        user: formatUserResponse(user),
         accessToken,
         refreshToken,
       }),
@@ -553,13 +548,7 @@ export const login = async (req, res) => {
 
     return res.status(200).json(
       new ApiResponse(true, "Login successful", {
-        user: {
-          id: user._id,
-          name: user.name,
-          username: user.username,
-          email: user.email,
-          isVerified: user.isVerified,
-        },
+        user: formatUserResponse(user),
         accessToken,
         refreshToken,
       }),

@@ -6,19 +6,7 @@ import {
   uploadToCloudinary,
   deleteFromCloudinary,
 } from "../services/media.service.js";
-
-const formatUserResponse = (user) => ({
-  id: user._id,
-  name: user.name,
-  username: user.username,
-  email: user.email,
-  avatar: user.avatar,
-  avatarUrl: user.avatar?.url || null,
-  bio: user.bio,
-  website: user.website,
-  gender: user.gender,
-  isVerified: user.isVerified,
-});
+import { formatUserResponse } from "../utils/userFormatter.js";
 
 export const getProfile = async (req, res) => {
   return res.status(200).json(
