@@ -7,6 +7,9 @@ import {
   updateProfile,
   updateAvatar,
   removeAvatar,
+  addLink,
+  editLink,
+  deleteLink,
 } from "../controllers/user.controller.js";
 
 const router = express.Router();
@@ -20,6 +23,10 @@ router.post(
   updateAvatar,
 );
 router.delete("/profile/avatar", protect, removeAvatar);
+
+router.post("/profile/links", protect, addLink);
+router.patch("/profile/links/:linkId", protect, editLink);
+router.delete("/profile/links/:linkId", protect, deleteLink);
 
 router.get("/:username", protect, getPublicProfile);
 

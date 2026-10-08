@@ -33,6 +33,22 @@ const userSchema = new mongoose.Schema(
       default: '',
     },
 
+    links: [
+      {
+        url: {
+          type: String,
+          trim: true,
+          required: true,
+        },
+        title: {
+          type: String,
+          trim: true,
+          default: '',
+          maxlength: 100,
+        },
+      },
+    ],
+
     gender: {
       type: String,
       enum: ['male', 'female', 'custom', 'prefer_not_to_say'],

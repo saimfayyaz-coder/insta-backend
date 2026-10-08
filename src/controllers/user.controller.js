@@ -46,6 +46,11 @@ export const getPublicProfile = async (req, res) => {
           avatarUrl: user.avatar?.url || null,
           bio: user.bio,
           website: user.website,
+          links: (user.links || []).map((link) => ({
+            _id: link._id ? link._id.toString() : (link.id || ''),
+            url: link.url,
+            title: link.title || '',
+          })),
           isVerified: user.isVerified,
         },
       }),
@@ -179,6 +184,7 @@ export const updateProfile = async (req, res) => {
 
 export const updateAvatar = async (req, res) => {
   try {
+    await new Promise((resolve) => setTimeout(resolve, 6000));
     if (!req.file) {
       return res
         .status(400)
@@ -242,6 +248,18 @@ export const updateAvatar = async (req, res) => {
 
 export const removeAvatar = async (req, res) => {
   try {
+    // return res
+    //   .status(500)
+    //   .json(
+    //     new ApiResponse(
+    //       false,
+    //       "Failed to remove avatar",
+    //       null,
+    //       null,
+    //       ErrorCodes.SERVER_ERROR,
+    //     ),
+    //   );
+    await new Promise((resolve) => setTimeout(resolve, 6000));
     const user = await User.findById(req.user._id);
     if (!user) {
       return res
@@ -276,6 +294,222 @@ export const removeAvatar = async (req, res) => {
         new ApiResponse(
           false,
           "Failed to remove avatar",
+          null,
+          null,
+          ErrorCodes.SERVER_ERROR,
+        ),
+      );
+  }
+};
+
+export const addLink = async (req, res) => {
+  try {
+    const { url, title } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            false,
+            "User not found",
+            null,
+            null,
+            ErrorCodes.USER_NOT_FOUND,
+          ),
+        );
+    }
+
+    if (!url || typeof url !== "string" || !url.trim()) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            false,
+            "URL is required",
+            null,
+            { url: ["URL is required"] },
+            ErrorCodes.VALIDATION_FAILED,
+          ),
+        );
+    }
+
+    if (user.links && user.links.length >= 5) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            false,
+            "You can only add up to 5 links",
+            null,
+            { links: ["Maximum 5 links allowed"] },
+            ErrorCodes.VALIDATION_FAILED,
+          ),
+        );
+    }
+
+    const cleanUrl = url.trim();
+    const cleanTitle = typeof title === "string" ? title.trim() : "";
+
+    user.links.push({
+      url: cleanUrl,
+      title: cleanTitle,
+    });
+
+    await user.save();
+
+    return res.status(200).json(
+      new ApiResponse(true, "Link added successfully", {
+        user: formatUserResponse(user),
+      }),
+    );
+  } catch (error) {
+    console.error("Add link error:", error);
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(
+          false,
+          "Failed to add link",
+          null,
+          null,
+          ErrorCodes.SERVER_ERROR,
+        ),
+      );
+  }
+};
+
+export const editLink = async (req, res) => {
+  try {
+    const { linkId } = req.params;
+    const { url, title } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            false,
+            "User not found",
+            null,
+            null,
+            ErrorCodes.USER_NOT_FOUND,
+          ),
+        );
+    }
+
+    const link = user.links.id(linkId);
+    if (!link) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            false,
+            "Link not found",
+            null,
+            null,
+            ErrorCodes.VALIDATION_FAILED,
+          ),
+        );
+    }
+
+    if (url !== undefined) {
+      if (typeof url !== "string" || !url.trim()) {
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              false,
+              "URL cannot be empty",
+              null,
+              { url: ["URL cannot be empty"] },
+              ErrorCodes.VALIDATION_FAILED,
+            ),
+          );
+      }
+      link.url = url.trim();
+    }
+
+    if (title !== undefined) {
+      link.title = typeof title === "string" ? title.trim() : "";
+    }
+
+    await user.save();
+
+    return res.status(200).json(
+      new ApiResponse(true, "Link updated successfully", {
+        user: formatUserResponse(user),
+      }),
+    );
+  } catch (error) {
+    console.error("Edit link error:", error);
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(
+          false,
+          "Failed to update link",
+          null,
+          null,
+          ErrorCodes.SERVER_ERROR,
+        ),
+      );
+  }
+};
+
+export const deleteLink = async (req, res) => {
+  try {
+    const { linkId } = req.params;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            false,
+            "User not found",
+            null,
+            null,
+            ErrorCodes.USER_NOT_FOUND,
+          ),
+        );
+    }
+
+    const initialLength = user.links.length;
+    user.links = user.links.filter((l) => l._id.toString() !== linkId);
+
+    if (user.links.length === initialLength) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            false,
+            "Link not found",
+            null,
+            null,
+            ErrorCodes.VALIDATION_FAILED,
+          ),
+        );
+    }
+
+    await user.save();
+
+    return res.status(200).json(
+      new ApiResponse(true, "Link deleted successfully", {
+        user: formatUserResponse(user),
+      }),
+    );
+  } catch (error) {
+    console.error("Delete link error:", error);
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(
+          false,
+          "Failed to delete link",
           null,
           null,
           ErrorCodes.SERVER_ERROR,
