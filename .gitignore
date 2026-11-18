@@ -1,2 +1,5 @@
 node_modules
 .env
+# Environment files with secrets (examples are committed)
+.env.*
+!.env.*.example
