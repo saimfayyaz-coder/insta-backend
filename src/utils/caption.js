@@ -1,5 +1,4 @@
-// Unicode letters/digits so #café and #کراچی count as tags, like on Instagram
-// The lookbehinds skip tags in the middle of a word and emails like a@b.com
+// Unicode tags like #café count; tags inside words and emails like a@b.com don't
 const HASHTAG_REGEX = /(?<![\p{L}\p{N}_])#([\p{L}\p{N}_]+)/gu;
 const MENTION_REGEX = /(?<![\w.])@([a-zA-Z0-9._]{1,30})/g;
 
