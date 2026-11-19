@@ -28,6 +28,21 @@ export const ErrorCodes = {
   INVALID_RESET_TOKEN:     'INVALID_RESET_TOKEN',     // Password reset token expired or invalid
 
 
+  // ─── Posts & Media ────────────────────────────────────────────────────────
+  POST_MEDIA_REQUIRED:     'POST_MEDIA_REQUIRED',     // Post has no images
+  POST_TOO_MANY_MEDIA:     'POST_TOO_MANY_MEDIA',     // More images than allowed
+  CAPTION_TOO_LONG:        'CAPTION_TOO_LONG',        // Caption over the length limit
+  TOO_MANY_HASHTAGS:       'TOO_MANY_HASHTAGS',       // Caption has too many #tags
+  TOO_MANY_MENTIONS:       'TOO_MANY_MENTIONS',       // Caption has too many @mentions
+  INVALID_ASPECT_RATIO:    'INVALID_ASPECT_RATIO',    // Not 1:1, 4:5 or 1.91:1
+  MEDIA_NOT_FOUND:         'MEDIA_NOT_FOUND',         // Media missing, not owned, or already used
+  INVALID_IMAGE:           'INVALID_IMAGE',           // Not an image or cannot be decoded
+  FILE_TOO_LARGE:          'FILE_TOO_LARGE',          // Upload over the size limit
+  UPLOAD_FAILED:           'UPLOAD_FAILED',           // Image storage failed
+  POST_NOT_FOUND:          'POST_NOT_FOUND',          // Post missing or deleted
+  FORBIDDEN:               'FORBIDDEN',               // Not allowed to touch this resource
+  RATE_LIMITED:            'RATE_LIMITED',            // Too many uploads or posts
+
   // ─── Generic ──────────────────────────────────────────────────────────────
   SERVER_ERROR:            'SERVER_ERROR',            // Unhandled 500
 };

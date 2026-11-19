@@ -106,6 +106,12 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
 
+    postsCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     deviceToken: {
       type: String,
       default: null,

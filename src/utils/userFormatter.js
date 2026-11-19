@@ -14,4 +14,5 @@ export const formatUserResponse = (user) => ({
   })),
   gender: user.gender || "prefer_not_to_say",
   isVerified: user.isVerified,
+  postsCount: user.postsCount || 0,
 });

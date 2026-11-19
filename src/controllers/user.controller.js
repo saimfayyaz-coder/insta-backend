@@ -52,6 +52,7 @@ export const getPublicProfile = async (req, res) => {
             title: link.title || '',
           })),
           isVerified: user.isVerified,
+          postsCount: user.postsCount || 0,
         },
       }),
     );

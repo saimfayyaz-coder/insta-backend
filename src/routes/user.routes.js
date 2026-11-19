@@ -11,6 +11,7 @@ import {
   editLink,
   deleteLink,
 } from "../controllers/user.controller.js";
+import { getUserPosts } from "../controllers/post.controller.js";
 
 const router = express.Router();
 
@@ -28,6 +29,7 @@ router.post("/profile/links", protect, addLink);
 router.patch("/profile/links/:linkId", protect, editLink);
 router.delete("/profile/links/:linkId", protect, deleteLink);
 
+router.get("/:userId/posts", protect, getUserPosts);
 router.get("/:username", protect, getPublicProfile);
 
 export default router;
