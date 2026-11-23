@@ -43,6 +43,9 @@ export const ErrorCodes = {
   FORBIDDEN:               'FORBIDDEN',               // Not allowed to touch this resource
   RATE_LIMITED:            'RATE_LIMITED',            // Too many uploads or posts
 
+  // ─── Follows ──────────────────────────────────────────────────────────────
+  CANNOT_FOLLOW_SELF:      'CANNOT_FOLLOW_SELF',      // Following your own account
+
   // ─── Generic ──────────────────────────────────────────────────────────────
   SERVER_ERROR:            'SERVER_ERROR',            // Unhandled 500
 };

@@ -6,7 +6,16 @@ import {
   uploadToCloudinary,
   deleteFromCloudinary,
 } from "../services/media.service.js";
-import { formatUserResponse } from "../utils/userFormatter.js";
+import {
+  USER_SUMMARY_FIELDS,
+  formatPublicProfile,
+  formatUserResponse,
+  formatUserSummary,
+} from "../utils/userFormatter.js";
+import { FOLLOW_LIMITS } from "../utils/followLimits.js";
+import { getFollowedIds, isFollowingUser } from "../services/follow.service.js";
+
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const getProfile = async (req, res) => {
   return res.status(200).json(
@@ -36,24 +45,13 @@ export const getPublicProfile = async (req, res) => {
         );
     }
 
+    const isFollowing = user._id.equals(req.user._id)
+      ? false
+      : await isFollowingUser(req.user._id, user._id);
+
     return res.status(200).json(
       new ApiResponse(true, "Public profile fetched successfully", {
-        user: {
-          id: user._id,
-          name: user.name,
-          username: user.username,
-          avatar: user.avatar,
-          avatarUrl: user.avatar?.url || null,
-          bio: user.bio,
-          website: user.website,
-          links: (user.links || []).map((link) => ({
-            _id: link._id ? link._id.toString() : (link.id || ''),
-            url: link.url,
-            title: link.title || '',
-          })),
-          isVerified: user.isVerified,
-          postsCount: user.postsCount || 0,
-        },
+        user: formatPublicProfile(user, isFollowing),
       }),
     );
   } catch (error) {
@@ -68,6 +66,44 @@ export const getPublicProfile = async (req, res) => {
           ErrorCodes.SERVER_ERROR,
         ),
       );
+  }
+};
+
+// Usernames starting with the query, or names containing it
+export const searchUsers = async (req, res) => {
+  try {
+    const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    if (!query) {
+      return res.status(200).json(new ApiResponse(true, "Users fetched", { users: [] }));
+    }
+
+    const pattern = escapeRegex(query.slice(0, FOLLOW_LIMITS.SEARCH_MAX_LENGTH));
+    const users = await User.find({
+      _id: { $ne: req.user._id },
+      $or: [
+        { username: { $regex: `^${pattern}`, $options: "i" } },
+        { name: { $regex: pattern, $options: "i" } },
+      ],
+    })
+      .select(USER_SUMMARY_FIELDS)
+      .sort({ followersCount: -1, username: 1 })
+      .limit(FOLLOW_LIMITS.SEARCH_LIMIT);
+
+    const followedIds = await getFollowedIds(
+      req.user._id,
+      users.map((user) => user._id),
+    );
+
+    return res.status(200).json(
+      new ApiResponse(true, "Users fetched", {
+        users: users.map((user) => formatUserSummary(user, followedIds.has(user._id.toString()))),
+      }),
+    );
+  } catch (error) {
+    console.error("Search users error:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(false, "Failed to search users", null, null, ErrorCodes.SERVER_ERROR));
   }
 };
 

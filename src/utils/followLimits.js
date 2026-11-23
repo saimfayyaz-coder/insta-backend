@@ -1,0 +1,6 @@
+export const FOLLOW_LIMITS = {
+  PAGE_SIZE: 20,
+  MAX_PAGE_SIZE: 50,
+  SEARCH_LIMIT: 20,
+  SEARCH_MAX_LENGTH: 30,
+};

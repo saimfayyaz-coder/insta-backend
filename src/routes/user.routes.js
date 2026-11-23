@@ -10,8 +10,15 @@ import {
   addLink,
   editLink,
   deleteLink,
+  searchUsers,
 } from "../controllers/user.controller.js";
 import { getUserPosts } from "../controllers/post.controller.js";
+import {
+  followUser,
+  unfollowUser,
+  getFollowers,
+  getFollowing,
+} from "../controllers/follow.controller.js";
 
 const router = express.Router();
 
@@ -29,7 +36,13 @@ router.post("/profile/links", protect, addLink);
 router.patch("/profile/links/:linkId", protect, editLink);
 router.delete("/profile/links/:linkId", protect, deleteLink);
 
+router.get("/search", protect, searchUsers);
+
 router.get("/:userId/posts", protect, getUserPosts);
+router.post("/:userId/follow", protect, followUser);
+router.delete("/:userId/follow", protect, unfollowUser);
+router.get("/:userId/followers", protect, getFollowers);
+router.get("/:userId/following", protect, getFollowing);
 router.get("/:username", protect, getPublicProfile);
 
 export default router;
