@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Post from "../models/Post.js";
 import Media from "../models/Media.js";
 import User from "../models/User.js";
+import Follow from "../models/Follow.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { ErrorCodes } from "../utils/ErrorCodes.js";
 import { MEDIA_STATUS, POST_ASPECT_RATIOS, POST_LIMITS } from "../utils/postLimits.js";
@@ -18,6 +19,9 @@ const fail = (res, status, message, code) =>
   res.status(status).json(new ApiResponse(false, message, null, null, code));
 
 const isObjectId = (value) => mongoose.isValidObjectId(value);
+
+const pageLimit = (value) =>
+  Math.min(Math.max(parseInt(value, 10) || POST_LIMITS.PAGE_SIZE, 1), POST_LIMITS.MAX_PAGE_SIZE);
 
 const sendPost = (res, status, message, post, author) =>
   res.status(status).json(new ApiResponse(true, message, { post: formatPostResponse(post, author) }));
@@ -160,10 +164,7 @@ export const getUserPosts = async (req, res) => {
       return fail(res, 404, "User not found", ErrorCodes.USER_NOT_FOUND);
     }
 
-    const limit = Math.min(
-      Math.max(parseInt(req.query.limit, 10) || POST_LIMITS.PAGE_SIZE, 1),
-      POST_LIMITS.MAX_PAGE_SIZE,
-    );
+    const limit = pageLimit(req.query.limit);
 
     const filter = { author: author._id };
     if (req.query.cursor) {
@@ -191,6 +192,43 @@ export const getUserPosts = async (req, res) => {
   } catch (error) {
     console.error("Get user posts error:", error);
     return fail(res, 500, "Failed to fetch posts", ErrorCodes.SERVER_ERROR);
+  }
+};
+
+// Posts from the people the user follows plus their own, newest first
+export const getFeed = async (req, res) => {
+  try {
+    const limit = pageLimit(req.query.limit);
+    const followingIds = await Follow.find({ follower: req.user._id }).distinct("following");
+
+    const filter = { author: { $in: [...followingIds, req.user._id] } };
+    if (req.query.cursor) {
+      const cursor = decodeCursor(req.query.cursor);
+      if (!cursor) {
+        return fail(res, 400, "Invalid cursor", ErrorCodes.VALIDATION_FAILED);
+      }
+      Object.assign(filter, afterCursor(cursor));
+    }
+
+    // One extra tells whether another page exists
+    const posts = await Post.find(filter)
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit + 1)
+      .populate("author", AUTHOR_FIELDS);
+
+    const hasMore = posts.length > limit;
+    const page = hasMore ? posts.slice(0, limit) : posts;
+
+    return res.status(200).json(
+      new ApiResponse(true, "Feed fetched", {
+        // Posts whose author account is gone are skipped
+        posts: page.filter((post) => post.author).map((post) => formatPostResponse(post)),
+        nextCursor: hasMore ? encodeCursor(page[page.length - 1]) : null,
+      }),
+    );
+  } catch (error) {
+    console.error("Get feed error:", error);
+    return fail(res, 500, "Failed to fetch feed", ErrorCodes.SERVER_ERROR);
   }
 };
 
