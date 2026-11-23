@@ -6,11 +6,8 @@ import ApiResponse from "../utils/ApiResponse.js";
 import { ErrorCodes } from "../utils/ErrorCodes.js";
 import { MEDIA_STATUS, POST_ASPECT_RATIOS, POST_LIMITS } from "../utils/postLimits.js";
 import { parseCaption } from "../utils/caption.js";
-import {
-  decodePostCursor,
-  encodePostCursor,
-  formatPostResponse,
-} from "../utils/postFormatter.js";
+import { formatPostResponse } from "../utils/postFormatter.js";
+import { afterCursor, decodeCursor, encodeCursor } from "../utils/cursor.js";
 import { deleteManyFromCloudinary } from "../services/media.service.js";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -170,14 +167,11 @@ export const getUserPosts = async (req, res) => {
 
     const filter = { author: author._id };
     if (req.query.cursor) {
-      const cursor = decodePostCursor(req.query.cursor);
+      const cursor = decodeCursor(req.query.cursor);
       if (!cursor) {
         return fail(res, 400, "Invalid cursor", ErrorCodes.VALIDATION_FAILED);
       }
-      filter.$or = [
-        { createdAt: { $lt: cursor.createdAt } },
-        { createdAt: cursor.createdAt, _id: { $lt: new mongoose.Types.ObjectId(cursor.id) } },
-      ];
+      Object.assign(filter, afterCursor(cursor));
     }
 
     // One extra tells whether another page exists
@@ -191,7 +185,7 @@ export const getUserPosts = async (req, res) => {
     return res.status(200).json(
       new ApiResponse(true, "Posts fetched", {
         posts: page.map((post) => formatPostResponse(post, author)),
-        nextCursor: hasMore ? encodePostCursor(page[page.length - 1]) : null,
+        nextCursor: hasMore ? encodeCursor(page[page.length - 1]) : null,
       }),
     );
   } catch (error) {
