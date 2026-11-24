@@ -9,6 +9,7 @@ import userRoutes from "./routes/user.routes.js";
 import todoRoutes from "./routes/todo.routes.js";
 import postRoutes from "./routes/post.routes.js";
 import mediaRoutes from "./routes/media.routes.js";
+import e2eRoutes from "./routes/e2e.routes.js";
 
 const app = express();
 
@@ -41,6 +42,12 @@ app.use("/api/users", userRoutes);
 app.use("/api/todos", todoRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/media", mediaRoutes);
+
+// Test-data API for E2E runs: only on test/staging servers that opt in and set a token.
+// Production never sets these, so the routes don't exist there.
+if (process.env.E2E_TEST_API_ENABLED === "true" && process.env.E2E_TEST_TOKEN) {
+  app.use("/api/test", e2eRoutes);
+}
 
 app.get("/", (req, res) => {
   res.json({
