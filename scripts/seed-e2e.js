@@ -1,4 +1,4 @@
-// Seeds the E2E test database with known users.
+// Seeds the E2E test database with known users, each with one post.
 // Run: npm run seed:e2e   (loads .env.test, never .env)
 //
 // Safety: refuses to run unless NODE_ENV=test AND the database name ends with "_e2e",
@@ -7,10 +7,14 @@ import "dotenv/config";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import User from "../src/models/User.js";
+import {
+  E2E_CONFIG,
+  createSeedPost,
+  resetUserContent,
+} from "../src/services/e2e.service.js";
 
-const REQUIRED_DB_SUFFIX = "_e2e";
-
-// Every E2E user. Tests log in with these; add more here when tests need other states.
+// Fixed account for logging in by hand during local testing.
+// Automated tests don't use it: they create their own users through the test API (/api/test).
 const buildSeedUsers = (password) => [
   {
     username: "e2e_user01",
@@ -36,9 +40,9 @@ const run = async () => {
   await mongoose.connect(process.env.MONGODB_URI);
   const dbName = mongoose.connection.name;
 
-  if (!dbName.endsWith(REQUIRED_DB_SUFFIX)) {
+  if (!dbName.endsWith(E2E_CONFIG.REQUIRED_DB_SUFFIX)) {
     await mongoose.disconnect();
-    fail(`database "${dbName}" does not end with "${REQUIRED_DB_SUFFIX}". Refusing to seed.`);
+    fail(`database "${dbName}" does not end with "${E2E_CONFIG.REQUIRED_DB_SUFFIX}". Refusing to seed.`);
   }
 
   console.log(`[seed:e2e] Database: ${dbName}`);
@@ -48,7 +52,7 @@ const run = async () => {
   for (const seedUser of buildSeedUsers(hashedPassword)) {
     // Upsert + full reset: the user always ends up in exactly this state,
     // whatever earlier test runs changed (bio, avatar, tokens...).
-    await User.findOneAndUpdate(
+    const user = await User.findOneAndUpdate(
       { username: seedUser.username },
       {
         $set: {
@@ -61,11 +65,17 @@ const run = async () => {
           otp: { code: null, expiresAt: null },
           refreshToken: null,
           deviceToken: null,
+          postsCount: 1,
+          followersCount: 0,
+          followingCount: 0,
         },
       },
-      { upsert: true, runValidators: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: "after", runValidators: true, setDefaultsOnInsert: true },
     );
-    console.log(`[seed:e2e] Ready: ${seedUser.username}`);
+
+    await resetUserContent(user._id);
+    await createSeedPost(user);
+    console.log(`[seed:e2e] Ready: ${seedUser.username} (1 post, no follows)`);
   }
 
   await mongoose.disconnect();
