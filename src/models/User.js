@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+import { AUTH_LIMITS } from "../utils/authLimits.js";
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -131,6 +133,15 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+  },
+);
+
+// Keyed on updatedAt so a resent OTP or retried signup restarts the clock
+userSchema.index(
+  { updatedAt: 1 },
+  {
+    expireAfterSeconds: AUTH_LIMITS.UNVERIFIED_USER_TTL_SECONDS,
+    partialFilterExpression: { isVerified: false },
   },
 );
 

@@ -227,6 +227,20 @@ export const signup = async (req, res) => {
       }),
     );
   } catch (error) {
+    // Another signup took the username between our check and the save
+    if (error.code === 11000 && error.keyPattern?.username) {
+      return res
+        .status(409)
+        .json(
+          new ApiResponse(
+            false,
+            "This username is already taken",
+            null,
+            { username: ["This username is already taken"] },
+            ErrorCodes.USERNAME_ALREADY_EXISTS,
+          ),
+        );
+    }
     console.error("Signup error:", error);
     return res
       .status(500)
