@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "dev:test": "nodemon src/server.js dotenv_config_path=.env.test",
     "start:test": "node src/server.js dotenv_config_path=.env.test",
-    "seed:e2e": "node scripts/seed-e2e.js dotenv_config_path=.env.test"
+    "seed:e2e": "node scripts/seed-e2e.js dotenv_config_path=.env.test",
+    "reconcile:likes": "node scripts/reconcile-like-counts.js",
+    "reconcile:comments": "node scripts/reconcile-comment-counts.js"
   },
   "keywords": [],
   "author": "",

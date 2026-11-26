@@ -1,11 +1,15 @@
-// Author is either a populated user or the request user
-export const formatPostResponse = (post, author) => {
+// Author is either a populated user or the request user.
+// viewerId is who asked; isLiked is whether they liked this post.
+export const formatPostResponse = (post, { author, viewerId, isLiked = false } = {}) => {
   const user = author || post.author;
+  const authorId = (user._id || user.id).toString();
+  // With hideLikeCount on, only the author sees the number
+  const showLikeCount = !post.hideLikeCount || viewerId?.toString() === authorId;
 
   return {
     id: post._id.toString(),
     author: {
-      id: (user._id || user.id).toString(),
+      id: authorId,
       username: user.username,
       avatarUrl: user.avatar?.url || null,
     },
@@ -20,13 +24,19 @@ export const formatPostResponse = (post, author) => {
     aspectRatio: post.aspectRatio,
     caption: post.caption || "",
     location: post.location || "",
-    likeCount: post.likeCount,
+    likeCount: showLikeCount ? post.likeCount : null,
     commentCount: post.commentCount,
     hideLikeCount: post.hideLikeCount,
     commentsDisabled: post.commentsDisabled,
     createdAt: post.createdAt,
-    // Likes and saves don't exist on the server yet
-    isLiked: false,
+    isLiked,
+    // Saves don't exist on the server yet
     isSaved: false,
   };
+};
+
+// The like count as this viewer may see it; author may be populated or a bare id
+export const visibleLikeCount = (post, viewerId) => {
+  const authorId = post.author._id || post.author;
+  return !post.hideLikeCount || authorId.equals(viewerId) ? post.likeCount : null;
 };

@@ -40,6 +40,10 @@ export const ErrorCodes = {
   FILE_TOO_LARGE:          'FILE_TOO_LARGE',          // Upload over the size limit
   UPLOAD_FAILED:           'UPLOAD_FAILED',           // Image storage failed
   POST_NOT_FOUND:          'POST_NOT_FOUND',          // Post missing or deleted
+  COMMENT_NOT_FOUND:       'COMMENT_NOT_FOUND',       // Comment missing or deleted
+  COMMENT_REQUIRED:        'COMMENT_REQUIRED',        // Comment text is empty
+  COMMENT_TOO_LONG:        'COMMENT_TOO_LONG',        // Comment text over the length limit
+  COMMENTS_DISABLED:       'COMMENTS_DISABLED',       // Post author disabled comments
   FORBIDDEN:               'FORBIDDEN',               // Not allowed to touch this resource
   RATE_LIMITED:            'RATE_LIMITED',            // Too many uploads or posts
 

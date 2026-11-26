@@ -14,6 +14,12 @@ import { parseCaption } from "../utils/caption.js";
 import { formatPostResponse } from "../utils/postFormatter.js";
 import { afterCursor, decodeCursor, encodeCursor } from "../utils/cursor.js";
 import { deleteManyFromCloudinary } from "../services/media.service.js";
+import {
+  deleteLikesForPost,
+  getLikedPostIds,
+  hasLikedPost,
+} from "../services/like.service.js";
+import { deleteCommentsForPost } from "../services/comment.service.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DUPLICATE_KEY_ERROR = 11000;
@@ -30,12 +36,28 @@ const pageLimit = (value) =>
     POST_LIMITS.MAX_PAGE_SIZE,
   );
 
-const sendPost = (res, status, message, post, author) =>
+// options: { author, viewerId, isLiked }, passed to formatPostResponse
+const sendPost = (res, status, message, post, options) =>
   res.status(status).json(
     new ApiResponse(true, message, {
-      post: formatPostResponse(post, author),
+      post: formatPostResponse(post, options),
     }),
   );
+
+// The viewer's like state for a page of posts, in one query
+const formatPage = async (posts, viewerId, author) => {
+  const likedIds = await getLikedPostIds(
+    viewerId,
+    posts.map((post) => post._id),
+  );
+  return posts.map((post) =>
+    formatPostResponse(post, {
+      author,
+      viewerId,
+      isLiked: likedIds.has(post._id.toString()),
+    }),
+  );
+};
 
 const validateCreateBody = (body) => {
   const {
@@ -111,7 +133,11 @@ export const createPost = async (req, res) => {
         clientRequestId,
       });
       if (existing) {
-        return sendPost(res, 200, "Post already created", existing, req.user);
+        return sendPost(res, 200, "Post already created", existing, {
+          author: req.user,
+          viewerId: req.user._id,
+          isLiked: await hasLikedPost(req.user._id, existing._id),
+        });
       }
     }
 
@@ -187,7 +213,11 @@ export const createPost = async (req, res) => {
           clientRequestId,
         });
         if (existing)
-          return sendPost(res, 200, "Post already created", existing, req.user);
+          return sendPost(res, 200, "Post already created", existing, {
+            author: req.user,
+            viewerId: req.user._id,
+            isLiked: await hasLikedPost(req.user._id, existing._id),
+          });
       }
       throw error;
     }
@@ -198,7 +228,10 @@ export const createPost = async (req, res) => {
     );
     await User.updateOne({ _id: req.user._id }, { $inc: { postsCount: 1 } });
 
-    return sendPost(res, 201, "Post created", post, req.user);
+    return sendPost(res, 201, "Post created", post, {
+      author: req.user,
+      viewerId: req.user._id,
+    });
   } catch (error) {
     console.error("Create post error:", error);
     return fail(res, 500, "Failed to create post", ErrorCodes.SERVER_ERROR);
@@ -238,7 +271,7 @@ export const getUserPosts = async (req, res) => {
 
     return res.status(200).json(
       new ApiResponse(true, "Posts fetched", {
-        posts: page.map((post) => formatPostResponse(post, author)),
+        posts: await formatPage(page, req.user._id, author),
         nextCursor: hasMore ? encodeCursor(page[page.length - 1]) : null,
       }),
     );
@@ -277,9 +310,10 @@ export const getFeed = async (req, res) => {
     return res.status(200).json(
       new ApiResponse(true, "Feed fetched", {
         // Posts whose author account is gone are skipped
-        posts: page
-          .filter((post) => post.author)
-          .map((post) => formatPostResponse(post)),
+        posts: await formatPage(
+          page.filter((post) => post.author),
+          req.user._id,
+        ),
         nextCursor: hasMore ? encodeCursor(page[page.length - 1]) : null,
       }),
     );
@@ -301,7 +335,10 @@ export const getPost = async (req, res) => {
       return fail(res, 404, "Post not found", ErrorCodes.POST_NOT_FOUND);
     }
 
-    return sendPost(res, 200, "Post fetched", post);
+    return sendPost(res, 200, "Post fetched", post, {
+      viewerId: req.user._id,
+      isLiked: await hasLikedPost(req.user._id, post._id),
+    });
   } catch (error) {
     console.error("Get post error:", error);
     return fail(res, 500, "Failed to fetch post", ErrorCodes.SERVER_ERROR);
@@ -338,6 +375,8 @@ export const deletePost = async (req, res) => {
       await Media.deleteMany({
         _id: { $in: post.media.map((item) => item.media) },
       });
+      await deleteLikesForPost(post._id);
+      await deleteCommentsForPost(post._id);
       await deleteManyFromCloudinary(
         post.media.flatMap((item) => [item.publicId, item.thumbPublicId]),
       );
